@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كابوس منتصف الليل: إبطال القنبلة الكيميائية - إشراف أ. باسمة محرق</title>
+  <!-- مكتبة Three.js ثلاثية الأبعاد -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0d1117;
+      color: #ffffff;
+      direction: rtl;
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* الشريط العلوي للقيادة والاعتماد */
+    #hud {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .hud-box {
+      background: rgba(13, 17, 23, 0.9);
+      border: 1px solid rgba(255, 68, 68, 0.5);
+      border-radius: 10px;
+      padding: 10px 18px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(6px);
+    }
+
+    .supervisor-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #ffd700;
+      font-weight: bold;
+      font-size: 14px;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+    }
+
+    .hud-title {
+      font-size: 15px;
+      color: #ff5555;
+      font-weight: bold;
+    }
+
+    .hud-sub {
+      font-size: 12px;
+      color: #bbbbbb;
+      margin-top: 2px;
+    }
+
+    /* مؤشر منتصف الشاشة */
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 5;
+      transition: all 0.2s ease;
+    }
+
+    #crosshair.active {
+      border-color: #ff2222;
+      transform: translate(-50%, -50%) scale(2);
+      box-shadow: 0 0 14px #ff0000;
+    }
+
+    /* زر التفاعل عند الاقتراب */
+    #interact-prompt {
+      position: absolute;
+      bottom: 22%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #c62828;
+      color: #ffffff;
+      padding: 12px 28px;
+      border-radius: 30px;
+      font-weight: bold;
+      font-size: 15px;
+      display: none;
+      z-index: 20;
+      cursor: pointer;
+      box-shadow: 0 0 25px rgba(255, 0, 0, 0.85);
+      border: 2px solid #ffffff;
+      animation: pulseBtn 0.9s infinite alternate;
+    }
+
+    @keyframes pulseBtn {
+      from { transform: translateX(-50%) scale(1); }
+      to { transform: translateX(-50%) scale(1.06); }
+    }
+
+    #controls-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #cccccc;
+      z-index: 10;
+      border-right: 3px solid #ff4444;
+    }
+
+    /* نافذة تفكيك القنبلة بالـ pH */
+    #defusal-modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 92%;
+      max-width: 620px;
+      background: #111520;
+      border: 2px solid #ff3333;
+      box-shadow: 0 0 45px rgba(255, 0, 0, 0.7);
+      border-radius: 14px;
+      padding: 22px;
+      z-index: 50;
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .bomb-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #2a3448;
+      padding-bottom: 12px;
+    }
+
+    .timer-display {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 34px;
+      font-weight: bold;
+      color: #ff2222;
+      text-shadow: 0 0 12px #ff0000;
+      letter-spacing: 2px;
+    }
+
+    .close-btn {
+      background: #2b1414;
+      color: #ff8888;
+      border: 1px solid #ff4444;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    .close-btn:hover {
+      background: #ff2222;
+      color: #fff;
+    }
+
+    .chamber-wrapper {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 16px;
+      border-radius: 10px;
+    }
+
+    .tube-container {
+      position: relative;
+      width: 85px;
+      height: 190px;
+      border: 3px solid #cbd5e1;
+      border-radius: 0 0 42px 42px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      flex-shrink: 0;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+    }
+
+    #chemical-liquid {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 75%;
+      background: #ff1100;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 0 20px currentColor;
+    }
+
+    .tube-reflection {
+      position: absolute;
+      top: 0;
+      left: 8px;
+      width: 6px;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 3px;
+    }
+
+    .ph-data {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .ph-reading {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .ph-bar {
+      width: 100%;
+      height: 14px;
+      border-radius: 7px;
+      background: linear-gradient(to left, #7000aa 0%, #0011ff 25%, #00ff44 50%, #ffbb00 75%, #ff0000 100%);
+      position: relative;
+      margin-top: 4px;
+    }
+
+    #ph-needle {
+      position: absolute;
+      top: -5px;
+      width: 5px;
+      height: 24px;
+      background: #ffffff;
+      transform: translateX(50%);
+      transition: right 0.2s ease;
+      box-shadow: 0 0 8px #ffffff;
+    }
+
+    .target-box {
+      background: rgba(0, 255, 100, 0.12);
+      border: 1px dashed #00ff66;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #99ffbb;
+    }
+
+    .reagents-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .reagent-btn {
+      padding: 10px 12px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #ffffff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      transition: all 0.15s ease;
+    }
+    .reagent-btn:hover {
+      background: #334155;
+      border-color: #64748b;
+    }
+    .reagent-btn:active {
+      transform: scale(0.97);
+    }
